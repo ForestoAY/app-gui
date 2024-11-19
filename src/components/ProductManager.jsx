@@ -5,6 +5,7 @@ const API_BASE = "http://localhost:8081/api";
 
 function ProductManager() {
   const [products, setProducts] = useState([]);
+  const [types, setTypes] = useState([]); // Untuk menyimpan daftar tipe
   const [name, setName] = useState("");
   const [typeId, setTypeId] = useState("");
   const [price, setPrice] = useState("");
@@ -17,6 +18,16 @@ function ProductManager() {
       setProducts(response.data.content);
     } catch (error) {
       console.error("Error fetching products:", error);
+    }
+  };
+
+  // Fetch all types
+  const fetchTypes = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/types`);
+      setTypes(response.data);
+    } catch (error) {
+      console.error("Error fetching types:", error);
     }
   };
 
@@ -72,7 +83,7 @@ function ProductManager() {
   const editProduct = (product) => {
     setProductId(product.id);
     setName(product.name);
-    setTypeId(product.type.id);
+    setTypeId(product.type.id); // Isi typeId dengan ID dari tipe
     setPrice(product.price);
   };
 
@@ -86,36 +97,61 @@ function ProductManager() {
 
   useEffect(() => {
     fetchProducts();
+    fetchTypes();
   }, []);
 
   return (
-    <div>
-      <h2>Kelola Produk</h2>
-      <div>
-        <input
-          type="text"
-          placeholder="Nama Produk"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="ID Tipe Produk"
-          value={typeId}
-          onChange={(e) => setTypeId(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Harga Produk"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        <button onClick={saveProduct}>
-          {productId ? "Update Produk" : "Tambah Produk"}
-        </button>
-        {productId && <button onClick={resetForm}>Batal</button>}
+    <div className="mb-5">
+      <h2 className="mb-4">Kelola Produk</h2>
+      <div className="mb-3">
+        <div className="row g-2">
+          <div className="col">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Nama Produk"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="col">
+            <select
+              className="form-select"
+              value={typeId}
+              onChange={(e) => setTypeId(e.target.value)}
+            >
+              <option value="">Pilih Tipe</option>
+              {types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="col">
+            <input
+              type="number"
+              className="form-control"
+              placeholder="Harga Produk"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+          <div className="col-auto">
+            <button className="btn btn-primary" onClick={saveProduct}>
+              {productId ? "Update Produk" : "Tambah Produk"}
+            </button>
+          </div>
+          {productId && (
+            <div className="col-auto">
+              <button className="btn btn-secondary" onClick={resetForm}>
+                Batal
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-      <table border="1" style={{ marginTop: "20px", width: "100%" }}>
+      <table className="table table-striped">
         <thead>
           <tr>
             <th>ID</th>
@@ -133,8 +169,18 @@ function ProductManager() {
               <td>{product.type.name}</td>
               <td>{product.price}</td>
               <td>
-                <button onClick={() => editProduct(product)}>Edit</button>
-                <button onClick={() => deleteProduct(product.id)}>Hapus</button>
+                <button
+                  className="btn btn-warning btn-sm me-2"
+                  onClick={() => editProduct(product)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => deleteProduct(product.id)}
+                >
+                  Hapus
+                </button>
               </td>
             </tr>
           ))}

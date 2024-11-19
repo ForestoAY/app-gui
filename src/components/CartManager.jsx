@@ -49,25 +49,41 @@ function CartManager() {
   }, []);
 
   return (
-    <div>
-      <h2>Kelola Keranjang</h2>
-      <div>
-        <input
-          type="number"
-          placeholder="ID Produk"
-          value={productId}
-          onChange={(e) => setProductId(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Jumlah"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
-        <button onClick={addToCart}>Tambah ke Keranjang</button>
-        <button onClick={placeOrder}>Selesaikan Keranjang</button>
+    <div className="mt-5">
+      <h2 className="mb-4">Kelola Keranjang</h2>
+      <div className="mb-3">
+        <div className="row g-2">
+          <div className="col">
+            <input
+              type="number"
+              className="form-control"
+              placeholder="ID Produk"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            />
+          </div>
+          <div className="col">
+            <input
+              type="number"
+              className="form-control"
+              placeholder="Jumlah"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </div>
+          <div className="col-auto">
+            <button className="btn btn-primary" onClick={addToCart}>
+              Tambah ke Keranjang
+            </button>
+          </div>
+          <div className="col-auto">
+            <button className="btn btn-success" onClick={placeOrder}>
+              Selesaikan Keranjang
+            </button>
+          </div>
+        </div>
       </div>
-      <table border="1" style={{ marginTop: "20px", width: "100%" }}>
+      <table className="table table-striped">
         <thead>
           <tr>
             <th>ID</th>
@@ -85,7 +101,7 @@ function CartManager() {
               <td>{cart.items.length}</td>
               <td>{cart.totalAmount || 0}</td>
               <td>
-                <ul>
+                <ul className="list-unstyled">
                   {cart.items.map((item) => (
                     <li key={item.product.id}>
                       {item.product.name} - Jumlah: {item.quantity} - Subtotal:{" "}
