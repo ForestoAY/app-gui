@@ -3,25 +3,33 @@ import axios from "axios";
 
 const API_BASE = "http://localhost:8081/api";
 
-function ProductManager() {
+function ProductManager({ onCartUpdated }) {
   const [products, setProducts] = useState([]);
-  const [types, setTypes] = useState([]); // Untuk menyimpan daftar tipe
+  const [types, setTypes] = useState([]);
   const [name, setName] = useState("");
   const [typeId, setTypeId] = useState("");
   const [price, setPrice] = useState("");
-  const [productId, setProductId] = useState(null); // Untuk menyimpan ID produk yang sedang diupdate
+  const [productId, setProductId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 5;
 
-  // Fetch all products
-  const fetchProducts = async () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [quantity, setQuantity] = useState("");
+
+  const fetchProducts = async (page = 0) => {
     try {
-      const response = await axios.get(`${API_BASE}/products?page=0&size=10`);
+      const response = await axios.get(
+        `${API_BASE}/products?page=${page}&size=${pageSize}`
+      );
       setProducts(response.data.content);
+      setTotalPages(response.data.totalPages);
     } catch (error) {
       console.error("Error fetching products:", error);
     }
   };
 
-  // Fetch all types
   const fetchTypes = async () => {
     try {
       const response = await axios.get(`${API_BASE}/types`);
@@ -31,10 +39,8 @@ function ProductManager() {
     }
   };
 
-  // Add or update product
   const saveProduct = async () => {
     if (productId) {
-      // Update existing product
       try {
         await axios.put(`${API_BASE}/products/${productId}`, {
           name,
@@ -42,15 +48,13 @@ function ProductManager() {
           price: parseFloat(price),
         });
         alert("Produk berhasil diperbarui!");
-        setProductId(null); // Reset ID setelah update
         resetForm();
-        fetchProducts();
+        fetchProducts(currentPage);
       } catch (error) {
         console.error("Error updating product:", error);
         alert("Gagal memperbarui produk.");
       }
     } else {
-      // Add new product
       try {
         await axios.post(`${API_BASE}/products`, {
           name,
@@ -59,7 +63,7 @@ function ProductManager() {
         });
         alert("Produk berhasil ditambahkan!");
         resetForm();
-        fetchProducts();
+        fetchProducts(currentPage);
       } catch (error) {
         console.error("Error adding product:", error);
         alert("Gagal menambahkan produk.");
@@ -67,27 +71,49 @@ function ProductManager() {
     }
   };
 
-  // Delete product
   const deleteProduct = async (id) => {
     try {
       await axios.delete(`${API_BASE}/products/${id}`);
       alert("Produk berhasil dihapus!");
-      fetchProducts();
+      fetchProducts(currentPage);
     } catch (error) {
       console.error("Error deleting product:", error);
       alert("Gagal menghapus produk.");
     }
   };
 
-  // Edit product (prefill form)
+  const addToCart = async () => {
+    try {
+      await axios.post(`${API_BASE}/order/add-to-cart`, null, {
+        params: { productId: selectedProduct.id, quantity },
+      });
+      alert("Produk berhasil ditambahkan ke keranjang!");
+      onCartUpdated(); // Trigger untuk refresh keranjang
+      closeModal();
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Gagal menambahkan ke keranjang.");
+    }
+  };
+
+  const openModal = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedProduct(null);
+    setQuantity("");
+    setIsModalOpen(false);
+  };
+
   const editProduct = (product) => {
     setProductId(product.id);
     setName(product.name);
-    setTypeId(product.type.id); // Isi typeId dengan ID dari tipe
+    setTypeId(product.type.id);
     setPrice(product.price);
   };
 
-  // Reset form
   const resetForm = () => {
     setName("");
     setTypeId("");
@@ -95,10 +121,104 @@ function ProductManager() {
     setProductId(null);
   };
 
+  const changePage = (page) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      fetchProducts(page);
+    }
+  };
+
+  const renderPagination = () => {
+    const siblings = 1; // Number of sibling pages to display
+    const pagination = [];
+
+    for (
+      let i = Math.max(0, currentPage - siblings);
+      i <= Math.min(totalPages - 1, currentPage + siblings);
+      i++
+    ) {
+      pagination.push(
+        <li
+          key={i}
+          className={`page-item ${i === currentPage ? "active" : ""}`}
+        >
+          <button className="page-link" onClick={() => changePage(i)}>
+            {i + 1}
+          </button>
+        </li>
+      );
+    }
+
+    if (currentPage - siblings > 0) {
+      pagination.unshift(
+        <li key="start" className="page-item">
+          <button className="page-link" onClick={() => changePage(0)}>
+            1
+          </button>
+        </li>
+      );
+      if (currentPage - siblings > 1) {
+        pagination.splice(
+          1,
+          0,
+          <li key="dots-start" className="page-item disabled">
+            <span className="page-link">...</span>
+          </li>
+        );
+      }
+    }
+
+    if (currentPage + siblings < totalPages - 1) {
+      pagination.push(
+        <li key="dots-end" className="page-item disabled">
+          <span className="page-link">...</span>
+        </li>
+      );
+      pagination.push(
+        <li key="end" className="page-item">
+          <button
+            className="page-link"
+            onClick={() => changePage(totalPages - 1)}
+          >
+            {totalPages}
+          </button>
+        </li>
+      );
+    }
+
+    return (
+      <nav aria-label="Pagination">
+        <ul className="pagination justify-content-center">
+          <li className={`page-item ${currentPage === 0 ? "disabled" : ""}`}>
+            <button
+              className="page-link"
+              onClick={() => changePage(currentPage - 1)}
+            >
+              &laquo; Previous
+            </button>
+          </li>
+          {pagination}
+          <li
+            className={`page-item ${
+              currentPage === totalPages - 1 ? "disabled" : ""
+            }`}
+          >
+            <button
+              className="page-link"
+              onClick={() => changePage(currentPage + 1)}
+            >
+              Next &raquo;
+            </button>
+          </li>
+        </ul>
+      </nav>
+    );
+  };
+
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(currentPage);
     fetchTypes();
-  }, []);
+  }, [currentPage]);
 
   return (
     <div className="mb-5">
@@ -176,16 +296,58 @@ function ProductManager() {
                   Edit
                 </button>
                 <button
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-danger btn-sm me-2"
                   onClick={() => deleteProduct(product.id)}
                 >
                   Hapus
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => openModal(product)}
+                >
+                  Tambah ke Keranjang
                 </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {renderPagination()}
+
+      {isModalOpen && (
+        <div
+          className="modal show d-block"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Tambah ke Keranjang</h5>
+                <button className="btn-close" onClick={closeModal}></button>
+              </div>
+              <div className="modal-body">
+                <p>Produk: {selectedProduct?.name}</p>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="Jumlah"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={closeModal}>
+                  Batal
+                </button>
+                <button className="btn btn-primary" onClick={addToCart}>
+                  Tambahkan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
